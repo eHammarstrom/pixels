@@ -2,10 +2,11 @@ module Codec.BMP.Pixels
   ( Pixel(..)
   , bmpToPixelMatrix
   , getPixel
+  , pixelMatrixToBmp
   ) where
 
 import Codec.BMP
-import Data.ByteString as B (unpack)
+import Data.ByteString as B (pack, unpack)
 import Data.Word8
 
 data Pixel = Pixel
@@ -24,10 +25,25 @@ getPixel (x, y) pxs
   | y < length pxs && x < length (head pxs) = Just ((pxs !! y) !! x)
   | otherwise = Nothing
 
+pixelMatrixToBmp :: [[Pixel]] -> BMP
+pixelMatrixToBmp mat = do
+  let height = length mat
+  let width = length (head mat)
+  let rgba = pack $ concatMap toWord (concat mat)
+  packRGBA32ToBMP width height rgba
+
 {- private -}
 chunk :: Int -> [a] -> [[a]]
 chunk _ [] = []
 chunk n xs = take n xs : chunk n (drop n xs)
+
+toWord :: Pixel -> [Word8]
+toWord (Pixel r g b a) = intToWord8 r : intToWord8 g : intToWord8 b : [intToWord8 a]
+
+intToWord8 :: Int -> Word8
+intToWord8 i
+  | i <= 255 = fromIntegral i :: Word8
+  | otherwise = error "Int greater than 8 bits"
 
 toPixel :: (Word8, Word8, Word8, Word8) -> Pixel
 toPixel (r, g, b, a) =
